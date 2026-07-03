@@ -1,0 +1,420 @@
+```html
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Dashboard</title>
+    <style>
+        /* ================= Reset & Base ================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a3c61 0%, #061121 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ================= Center Clock & Globe & Orbits ================= */
+        .center-clock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* โลกหมุนด้านหลังนาฬิกา */
+        .globe-bg {
+            position: absolute;
+            top: 125px; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px; 
+            height: 280px;
+            border-radius: 50%;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg');
+            background-size: cover;
+            animation: spinEarth 25s linear infinite;
+            opacity: 0.35; 
+            filter: invert(1) sepia(1) hue-rotate(180deg) brightness(1.5);
+            z-index: 0;
+            box-shadow: 0 0 35px rgba(64, 169, 255, 0.4);
+        }
+
+        @keyframes spinEarth {
+            from { background-position: 0 0; }
+            to { background-position: 200% 0; }
+        }
+
+        /* ================= Orbital System (วงโคจรยานพาหนะ 2.5D) ================= */
+        .orbit-container {
+            position: absolute;
+            top: 125px; 
+            left: 50%;
+            width: 0;
+            height: 0;
+            z-index: 0; 
+        }
+
+        .orbit-group {
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
+        /* เส้นประวงโคจร */
+        .orbit-line {
+            position: absolute;
+            width: var(--size); height: var(--size);
+            transform: translate(-50%, -50%) scaleY(var(--squish)) rotate(var(--angle));
+            border: 1.5px dashed rgba(64, 169, 255, 0.4); 
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(64, 169, 255, 0.1);
+            pointer-events: none;
+        }
+
+        .orbit-path {
+            position: absolute;
+            transform: scaleY(var(--squish)) rotate(var(--angle));
+        }
+
+        /* แอนิเมชันสำหรับพาหนะวิ่งซ้าย (ตามเข็ม) */
+        .orbit-mover {
+            position: absolute;
+            animation: moveAlongOrbit var(--speed) linear infinite;
+        }
+
+        /* แอนิเมชันสำหรับพาหนะวิ่งขวา (ทวนเข็ม - สำหรับเครื่องบิน) */
+        .orbit-mover.reverse {
+            animation: moveAlongOrbitReverse var(--speed) linear infinite;
+        }
+
+        @keyframes moveAlongOrbit {
+            0% { transform: rotate(0deg) translateX(var(--radius)) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(var(--radius)) rotate(-360deg); }
+        }
+
+        @keyframes moveAlongOrbitReverse {
+            0% { transform: rotate(360deg) translateX(var(--radius)) rotate(-360deg); }
+            100% { transform: rotate(0deg) translateX(var(--radius)) rotate(0deg); }
+        }
+
+        /* ตัวยานพาหนะ (ตั้งตรงเสมอ ไม่หงายท้อง) */
+        .orbit-object {
+            position: absolute;
+            /* แก้อาการเบี้ยวให้กลับมาตั้งตรง และใส่การเอียง (tilt) เล็กน้อย */
+            transform: rotate(var(--unangle)) scaleY(var(--unsquish)) rotate(var(--tilt, 0deg));
+            font-size: 2.2rem;
+            margin-top: -1.1rem; margin-left: -1.1rem; /* กึ่งกลางเส้น */
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.6));
+        }
+
+        /* เอฟเฟกต์เด้งและลอย เพิ่มความสมจริง */
+        .bounce {
+            display: inline-block;
+            animation: vehicleBounce 1.2s infinite ease-in-out;
+        }
+        @keyframes vehicleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); } /* รถเด้งเบาๆ */
+        }
+
+        .float {
+            display: inline-block;
+            animation: vehicleFloat 3s infinite ease-in-out;
+        }
+        @keyframes vehicleFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(3deg); } /* เรือ/เครื่องบินลอยตัว */
+        }
+
+        /* ================= Clock UI ================= */
+        .analog-clock {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            border: 4px solid rgba(64, 169, 255, 0.4);
+            background: rgba(0, 10, 30, 0.2); 
+            backdrop-filter: blur(2px); 
+            position: relative;
+            margin-bottom: 20px;
+            box-shadow: 0 0 35px rgba(64, 169, 255, 0.3), inset 0 0 15px rgba(64, 169, 255, 0.2);
+            z-index: 1;
+        }
+        /* จุดกลางนาฬิกา */
+        .analog-clock::after {
+            content: ''; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 10px; height: 10px; border-radius: 50%;
+            background: white; z-index: 5;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            background: white;
+            border-radius: 50px;
+            transform: translateX(-50%);
+        }
+
+        .hour-hand { width: 5px; height: 60px; background: #fff; z-index: 2;}
+        .minute-hand { width: 3px; height: 95px; background: #aee0ff; z-index: 3;}
+        .second-hand { width: 2px; height: 110px; background: #ff4d4f; z-index: 4;}
+
+        .digital-time {
+            font-size: 3.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255,255,255,0.4);
+            z-index: 1;
+        }
+        
+        .thai-date {
+            font-size: 1.2rem;
+            color: #b0c4de;
+            margin-bottom: 10px;
+            z-index: 1;
+        }
+
+        /* ================= Layout & Panels ================= */
+        .dashboard-container {
+            position: relative;
+            z-index: 10; 
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 1;
+            padding: 0 50px;
+        }
+
+        .left-spacer { width: 250px; }
+
+        .right-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .status-card { display: flex; align-items: center; width: 250px; }
+        .status-card h4 { margin-bottom: 5px; font-size: 0.9rem;}
+        .status-card p { font-size: 0.8rem; color: #aaa;}
+        .on-time { color: #52c41a; font-size: 0.8rem; font-weight: bold;}
+
+        footer {
+            display: flex;
+            justify-content: space-around;
+            margin-top: auto;
+            padding: 20px;
+        }
+
+        .stat-item { display: flex; align-items: center; gap: 15px; }
+        .stat-item h3 { font-size: 1.5rem; }
+        .stat-item p { font-size: 0.9rem; color: #b0c4de; }
+
+        .credit-text {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 1px;
+        }
+        .credit-text span { color: #40a9ff; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <header>
+            <div style="cursor: pointer;">☰</div>
+            <div style="cursor: pointer;">🔍 👤</div>
+        </header>
+
+        <main>
+            <!-- ซ้าย: เว้นว่างไว้แทนที่กล่องรูปคนเดิม เพื่อรักษาความสมดุล -->
+            <div class="left-spacer"></div>
+
+            <!-- กลาง: โลก + นาฬิกา + วงโคจร -->
+            <div class="center-clock">
+                <div class="globe-bg"></div>
+                
+                <!-- ระบบวงโคจร -->
+                <div class="orbit-container">
+                    
+                    <!-- 1. เครื่องบิน (บินซ้ายไปขวา ใช้ .reverse และเอียงเชิดหน้า 10 องศา) -->
+                    <div class="orbit-group" style="--size: 600px; --squish: 0.3; --angle: -20deg; --speed: 15s; --radius: 300px; --unsquish: 3.33; --unangle: 20deg; --tilt: 10deg;">
+                        <div class="orbit-line"></div>
+                        <div class="orbit-path">
+                            <div class="orbit-mover reverse">
+                                <div class="orbit-object"><span class="float">✈️</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. เรือ (วิ่งขวามาซ้าย หน้าหันถูกทิศอยู่แล้ว) -->
+                    <div class="orbit-group" style="--size: 500px; --squish: 0.35; --angle: 15deg; --speed: 22s; --radius: 250px; --unsquish: 2.85; --unangle: -15deg; --tilt: 0deg;">
+                        <div class="orbit-line"></div>
+                        <div class="orbit-path">
+                            <div class="orbit-mover">
+                                <div class="orbit-object"><span class="float">🚢</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. รถบรรทุก (วิ่งขวามาซ้าย มีแอนิเมชันกระเด้งถนน) -->
+                    <div class="orbit-group" style="--size: 550px; --squish: 0.25; --angle: -40deg; --speed: 18s; --radius: 275px; --unsquish: 4; --unangle: 40deg; --tilt: 0deg;">
+                        <div class="orbit-line"></div>
+                        <div class="orbit-path">
+                            <div class="orbit-mover">
+                                <div class="orbit-object"><span class="bounce">🚛</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. รถไฟ (วิ่งขวามาซ้าย มีแอนิเมชันกระเด้งราง) -->
+                    <div class="orbit-group" style="--size: 450px; --squish: 0.4; --angle: 35deg; --speed: 13s; --radius: 225px; --unsquish: 2.5; --unangle: -35deg; --tilt: 0deg;">
+                        <div class="orbit-line"></div>
+                        <div class="orbit-path">
+                            <div class="orbit-mover">
+                                <div class="orbit-object"><span class="bounce">🚄</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="analog-clock">
+                    <div class="hand hour-hand" id="hour"></div>
+                    <div class="hand minute-hand" id="min"></div>
+                    <div class="hand second-hand" id="sec"></div>
+                </div>
+                <div class="digital-time" id="digital">00:00:00</div>
+                <div class="thai-date" id="date">กำลังโหลดเวลาไทย...</div>
+                <div style="font-size: 0.9rem; color: #888; z-index: 1;">พระอาทิตย์: ↑ 05:48 ↓ 18:52 (เวลาประเทศไทย)</div>
+            </div>
+
+            <!-- ขวา: ข้อมูล -->
+            <div class="right-panels">
+                <div class="status-card glass-panel">
+                    <div>✈️</div>
+                    <div style="margin-left: 15px;">
+                        <h4>AIR FREIGHT</h4>
+                        <p>ขนส่งทางอากาศ</p>
+                        <div class="on-time">● ON TIME</div>
+                    </div>
+                </div>
+                <div class="status-card glass-panel">
+                    <div>🚛</div>
+                    <div style="margin-left: 15px;">
+                        <h4>LAND TRANSPORT</h4>
+                        <p>ขนส่งทางบก</p>
+                        <div class="on-time">● ON TIME</div>
+                    </div>
+                </div>
+                <div class="status-card glass-panel">
+                    <div>🚢</div>
+                    <div style="margin-left: 15px;">
+                        <h4>SEA FREIGHT</h4>
+                        <p>ขนส่งทางเรือ</p>
+                        <div class="on-time">● ON TIME</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="glass-panel">
+            <div class="stat-item">
+                <div>🌐</div>
+                <div><h3>150+</h3><p>COUNTRIES</p></div>
+            </div>
+            <div class="stat-item">
+                <div>📦</div>
+                <div><h3>50,000+</h3><p>SHIPMENTS</p></div>
+            </div>
+            <div class="stat-item">
+                <div>👥</div>
+                <div><h3>1,200+</h3><p>HAPPY CLIENTS</p></div>
+            </div>
+            <div class="stat-item">
+                <div>🎧</div>
+                <div><h3>24/7</h3><p>SUPPORT</p></div>
+            </div>
+        </footer>
+
+        <div class="credit-text">made by <span>chotipat supeeworakit</span> 💙</div>
+    </div>
+
+    <!-- Script ควบคุมเวลา -->
+    <script>
+        function updateClock() {
+            const systemTime = new Date();
+            const thaiTimeStr = systemTime.toLocaleString("en-US", { timeZone: "Asia/Bangkok" });
+            const now = new Date(thaiTimeStr);
+            
+            // ใช้ Millisecond เพื่อให้เข็มวินาทีเดินสมูท (เดินเรียบ)
+            const ms = systemTime.getMilliseconds();
+            const second = now.getSeconds() + (ms / 1000); 
+            const minute = now.getMinutes();
+            const hour = now.getHours();
+
+            const secDegree = (second / 60) * 360;
+            const minDegree = ((minute + second / 60) / 60) * 360;
+            const hourDegree = ((hour + minute / 60) / 12) * 360;
+
+            document.getElementById('sec').style.transform = `translateX(-50%) rotate(${secDegree}deg)`;
+            document.getElementById('min').style.transform = `translateX(-50%) rotate(${minDegree}deg)`;
+            document.getElementById('hour').style.transform = `translateX(-50%) rotate(${hourDegree}deg)`;
+
+            const displaySec = now.getSeconds();
+            document.getElementById('digital').innerText = 
+                String(hour).padStart(2, '0') + ':' + 
+                String(minute).padStart(2, '0') + ':' + 
+                String(displaySec).padStart(2, '0');
+
+            const options = { 
+                timeZone: 'Asia/Bangkok',
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('date').innerText = systemTime.toLocaleDateString('th-TH', options);
+        }
+
+        setInterval(updateClock, 50); // อัปเดตบ่อยๆ ให้เข็มวินาทีเดินเรียบ
+        updateClock(); 
+    </script>
+</body>
+</html>
+
+
+```
